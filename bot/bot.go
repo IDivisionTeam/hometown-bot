@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"fmt"
 	"hometown-bot/commands/lobby"
 	"log"
 	"os"
@@ -20,10 +21,10 @@ func init() {
 	// storage.Load()
 }
 
-func Run() {
+func Run() error {
 	discord, err := discordgo.New("Bot " + BotToken)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	lobby.GuildID = GuildID
@@ -35,7 +36,10 @@ func Run() {
 	discord.Open()
 
 	log.Println("Websocket open! Creating commands...")
-	registeredCommands := createCommands(discord)
+	registeredCommands, err := createCommands(discord)
+	if err != nil {
+		return err
+	}
 
 	defer discord.Close()
 
@@ -45,29 +49,35 @@ func Run() {
 	<-channel
 
 	log.Println("Bot stopped! Removing slash commands...")
-	removeSlashCommands(discord, registeredCommands)
+	err = removeSlashCommands(discord, registeredCommands)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func createCommands(discord *discordgo.Session) []*discordgo.ApplicationCommand {
+func createCommands(discord *discordgo.Session) ([]*discordgo.ApplicationCommand, error) {
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(lobby.Commands))
 	for i, v := range lobby.Commands {
 		cmd, err := discord.ApplicationCommandCreate(discord.State.User.ID, GuildID, v)
 		if err != nil {
-			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
+			return nil, fmt.Errorf("cannot create '%s' command: %w", v.Name, err)
 		}
 		registeredCommands[i] = cmd
 	}
 
-	return registeredCommands
+	return registeredCommands, nil
 }
 
-func removeSlashCommands(discord *discordgo.Session, registeredCommands []*discordgo.ApplicationCommand) {
+func removeSlashCommands(discord *discordgo.Session, registeredCommands []*discordgo.ApplicationCommand) error {
 	if RemoveCommands {
 		for _, v := range registeredCommands {
 			err := discord.ApplicationCommandDelete(discord.State.User.ID, GuildID, v.ID)
 			if err != nil {
-				log.Panicf("Cannot delete '%v' command: %v\n", v.Name, err)
+				return fmt.Errorf("cannot delete '%s' command: %w", v.Name, err)
 			}
 		}
 	}
+	return nil
 }

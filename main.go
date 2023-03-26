@@ -18,5 +18,9 @@ func main() {
 
 	bot.BotToken = botToken
 	bot.GuildID = guildId
-	bot.Run()
+
+	err := bot.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
 }

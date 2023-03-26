@@ -65,16 +65,16 @@ func HandleVoiceUpdates(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 			log.Println("Searching for lobby...")
 			channel, err := s.Channel(l)
 			if err != nil {
-				log.Printf("Unable to find a lobby! \n%v\n", err)
+				log.Println("unable to find a lobby! %w", err)
 				continue
 			}
 
 			userName := vsu.Member.User.Username
 			nickname := vsu.Member.Nick
 			name := ""
-			 if len(nickname) == 0 {
+			if len(nickname) == 0 {
 				name = userName
-			}  else {
+			} else {
 				name = nickname
 			}
 
@@ -89,7 +89,7 @@ func HandleVoiceUpdates(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 			log.Println("Found! Creating a new channel...")
 			newChannel, err := s.GuildChannelCreateComplex(GuildID, data)
 			if err != nil {
-				log.Printf("Unable to create a new channel! \n%v\n", err)
+				log.Println("unable to create a new channel! %w", err)
 				continue
 			}
 
@@ -97,9 +97,9 @@ func HandleVoiceUpdates(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 			tempChannels = append(tempChannels, newChannel.ID)
 
 			log.Println("Created! Moving a user to the new channel...")
-			merr := s.GuildMemberMove(GuildID, vsu.Member.User.ID, &newChannel.ID)
-			if merr != nil {
-				log.Printf("Unable to move a user to the new channel! \n%v\n", merr)
+			err = s.GuildMemberMove(GuildID, vsu.Member.User.ID, &newChannel.ID)
+			if err != nil {
+				log.Println("unable to move a user to the new channel! %w", err)
 				continue
 			}
 		}
@@ -110,7 +110,7 @@ func HandleVoiceUpdates(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 			if tc == previousState.ChannelID {
 				channel, err := s.Channel(tc)
 				if err != nil {
-					log.Printf("Unable to find a channel! \n%v\n", err)
+					log.Println("unable to find a channel! %w", err)
 					continue
 				}
 
@@ -119,7 +119,7 @@ func HandleVoiceUpdates(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 
 					st, err := s.ChannelDelete(tc)
 					if err != nil {
-						log.Printf("Unable to to delete the channel! \n%v\n", err)
+						log.Println("unable to to delete the channel! %w", err)
 						continue
 					}
 
