@@ -362,7 +362,7 @@ func (lc *LobbyCommands) handleCommandCapacity(s *discordgo.Session, i *discordg
 	}
 
 	_, err := lc.lobbyRepository.GetLobby(channel.ID)
-	if err != nil {
+	if err == nil {
 		return CommandResponse{
 			title:       "🧀 Warning",
 			description: "\"" + channel.Name + "\" is not a lobby!",
@@ -411,7 +411,7 @@ func (lc *LobbyCommands) handleCommandName(s *discordgo.Session, i *discordgo.In
 	name := options[0].Options[1].StringValue()
 
 	_, err := lc.lobbyRepository.GetLobby(channel.ID)
-	if err != nil {
+	if err == nil {
 		return CommandResponse{
 			title:       "🧀 Warning",
 			description: "\"" + channel.Name + "\" is not a lobby!",
