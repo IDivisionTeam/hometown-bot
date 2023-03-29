@@ -2,6 +2,7 @@ package storage
 
 import (
 	"database/sql"
+	"log"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -9,33 +10,38 @@ import (
 var lobbyTable = `
 CREATE TABLE IF NOT EXISTS lobbies(
 	id TEXT PRIMARY KEY,
+	category_id TEXT, 		/* immutable */
 	template TEXT,			/* mutable, default NULL */
-	capacity INTEGER,		/* mutable, default NULL */
+	capacity INTEGER		/* mutable, default NULL */
 );`
 
 var channelTable = `
 CREATE TABLE IF NOT EXISTS channels(
 	id TEXT PRIMARY KEY,
-	parent TEXT NOT NULL,	/* immutable */
+	parent_id TEXT NOT NULL	/* immutable */
 );`
 
-func Load() error {
-	db, err := sql.Open("sqlite3", ":memory:")
+func Load() (*sql.DB, error) {
+	db, err := sql.Open("sqlite3", "./storage.db")
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	defer db.Close()
 
 	_, err = db.Exec(lobbyTable)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	_, err = db.Exec(channelTable)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	err = db.Ping()
+	if err != nil {
+		return nil, err
+	}
+
+	log.Println("Storage loaded!")
+	return db, nil
 }

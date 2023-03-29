@@ -2,6 +2,8 @@ package main
 
 import (
 	"hometown-bot/bot"
+	"hometown-bot/repository"
+	"hometown-bot/storage"
 	"log"
 	"os"
 )
@@ -15,11 +17,23 @@ func main() {
 	if !ok {
 		log.Fatal("Must set Discord token as env variable: GUILD_ID")
 	}
+	
+	log.Println("Loading storage...")
+	db, err := storage.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer db.Close()
+
+	channelRepository := repository.NewChannelRepository(db)
+	lobbyRepository := repository.NewLobbyRepository(db)
 
 	bot.BotToken = botToken
 	bot.GuildID = guildId
+	b:= bot.Create(*channelRepository, *lobbyRepository)
 
-	err := bot.Run()
+	err = b.Run()
 	if err != nil {
 		log.Fatal(err)
 	}

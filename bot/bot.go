@@ -3,6 +3,7 @@ package bot
 import (
 	"fmt"
 	"hometown-bot/commands/lobby"
+	"hometown-bot/repository"
 	"log"
 	"os"
 	"os/signal"
@@ -16,22 +17,30 @@ var (
 	RemoveCommands bool   = true // Should remove slash commands when bot offline. Default - true.
 )
 
-func init() {
-	// log.Println("Preloading storage...")
-	// storage.Load()
+type Bot struct {
+	channelRepository repository.ChannelRepository
+	lobbyRepository   repository.LobbyRepository
 }
 
-func Run() error {
+func Create(channelRepository repository.ChannelRepository, lobbyRepository repository.LobbyRepository) *Bot {
+	return &Bot{
+		channelRepository: channelRepository,
+		lobbyRepository:   lobbyRepository,
+	}
+}
+
+func (bot *Bot) Run() error {
 	discord, err := discordgo.New("Bot " + BotToken)
 	if err != nil {
 		return err
 	}
 
 	lobby.GuildID = GuildID
+	lobbyCommands := lobby.New(bot.channelRepository, bot.lobbyRepository)
 
 	log.Println("Bot created! Attaching handlers...")
-	discord.AddHandler(lobby.HandleSlashCommands)
-	discord.AddHandler(lobby.HandleVoiceUpdates)
+	discord.AddHandler(lobbyCommands.HandleSlashCommands)
+	discord.AddHandler(lobbyCommands.HandleVoiceUpdates)
 
 	discord.Open()
 
