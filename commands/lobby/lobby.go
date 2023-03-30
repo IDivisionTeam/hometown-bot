@@ -122,7 +122,7 @@ func (lc *LobbyCommands) HandleVoiceUpdates(s *discordgo.Session, event *discord
 				name = nickname
 			}
 
-			if l.Template.Valid {
+			if l.Template.Valid && l.Template.String != "" {
 				name = l.Template.String + " " + name
 			} else {
 				name = "Кімната " + name
@@ -429,13 +429,23 @@ func (lc *LobbyCommands) handleCommandName(s *discordgo.Session, i *discordgo.In
 		}
 	}
 
+	var template sql.NullString
+	if strings.Contains(name, "^default^") {
+		template = sql.NullString{
+			Valid: true,
+			String: "",
+		}
+	} else {
+		template = sql.NullString{
+			Valid:  true,
+			String: name,
+		}
+	}
+
 	lobby := model.Lobby{
 		Id:         channel.ID,
 		CategoryID: channel.ParentID,
-		Template: sql.NullString{
-			Valid:  true,
-			String: name,
-		},
+		Template:   template,
 	}
 
 	err = lc.lobbyRepository.UpsertLobby(&lobby)
@@ -446,6 +456,14 @@ func (lc *LobbyCommands) handleCommandName(s *discordgo.Session, i *discordgo.In
 			Title:       "🚨 Error",
 			Description: "Unable to update lobby!",
 			ColorType:   color.Failure,
+		}
+	}
+
+	if strings.Contains(name, "^default^") {
+		return model.CommandResponse{
+			Title:       "✅ OK",
+			Description: "Name successfully reset to default for " + channel.Name + ".",
+			ColorType:   color.Success,
 		}
 	}
 
