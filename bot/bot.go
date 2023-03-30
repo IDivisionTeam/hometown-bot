@@ -12,7 +12,6 @@ import (
 )
 
 var (
-	GuildID        string        // Discord Server ID
 	BotToken       string        // Discord BOT API token
 	RemoveCommands bool   = true // Should remove slash commands when bot offline. Default - true.
 )
@@ -35,7 +34,6 @@ func (bot *Bot) Run() error {
 		return err
 	}
 
-	lobby.GuildID = GuildID
 	lobbyCommands := lobby.New(bot.channelRepository, bot.lobbyRepository)
 
 	log.Println("Bot created! Attaching handlers...")
@@ -69,7 +67,7 @@ func (bot *Bot) Run() error {
 func createCommands(discord *discordgo.Session) ([]*discordgo.ApplicationCommand, error) {
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(lobby.Commands))
 	for i, v := range lobby.Commands {
-		cmd, err := discord.ApplicationCommandCreate(discord.State.User.ID, GuildID, v)
+		cmd, err := discord.ApplicationCommandCreate(discord.State.User.ID, discord.State.Application.GuildID, v)
 		if err != nil {
 			return nil, fmt.Errorf("cannot create '%s' command: %w", v.Name, err)
 		}
@@ -82,7 +80,7 @@ func createCommands(discord *discordgo.Session) ([]*discordgo.ApplicationCommand
 func removeSlashCommands(discord *discordgo.Session, registeredCommands []*discordgo.ApplicationCommand) error {
 	if RemoveCommands {
 		for _, v := range registeredCommands {
-			err := discord.ApplicationCommandDelete(discord.State.User.ID, GuildID, v.ID)
+			err := discord.ApplicationCommandDelete(discord.State.User.ID, discord.State.Application.GuildID, v.ID)
 			if err != nil {
 				return fmt.Errorf("cannot delete '%s' command: %w", v.Name, err)
 			}

@@ -27,7 +27,6 @@ const (
 )
 
 var (
-	GuildID                  string                                    // Discord Server ID
 	dmPermission             bool   = false                            // Does not allow using Bot in DMs
 	defaultMemberPermissions int64  = discordgo.PermissionManageServer // Caller permission to use commands
 	Commands                        = getLobbyCommandGroup()           // Command group
@@ -58,7 +57,7 @@ func (lc *LobbyCommands) HandleSlashCommands(discord *discordgo.Session, interac
 	}
 }
 
-func (lc *LobbyCommands) HandleVoiceServerUpdates(s *discordgo.Session, event *discordgo.VoiceServerUpdate) {
+func (lc *LobbyCommands) HandleVoiceDelete(s *discordgo.Session, event *discordgo.ChannelDelete) {
 
 }
 
@@ -141,7 +140,7 @@ func (lc *LobbyCommands) HandleVoiceUpdates(s *discordgo.Session, event *discord
 			}
 
 			log.Println("Found! Creating a new channel...")
-			newChannel, err := s.GuildChannelCreateComplex(GuildID, data)
+			newChannel, err := s.GuildChannelCreateComplex(event.GuildID, data)
 			if err != nil {
 				log.Println("unable to create a new channel! %w", err)
 				continue
@@ -155,7 +154,7 @@ func (lc *LobbyCommands) HandleVoiceUpdates(s *discordgo.Session, event *discord
 			lc.channelRepository.SetChannel(&channel)
 
 			log.Println("Created! Moving a user to the new channel...")
-			err = s.GuildMemberMove(GuildID, event.Member.User.ID, &newChannel.ID)
+			err = s.GuildMemberMove(event.GuildID, event.Member.User.ID, &newChannel.ID)
 			if err != nil {
 				log.Println("unable to move a user to the new channel! %w", err)
 				continue
