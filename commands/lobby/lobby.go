@@ -26,18 +26,15 @@ const (
 	optionName      string = "name"     // Option for [commandName]
 )
 
-type CommandResponse struct {
-	title       string
-	description string
-	colorType   color.ColorType
-}
-
 var (
 	GuildID                  string                                    // Discord Server ID
 	dmPermission             bool   = false                            // Does not allow using Bot in DMs
 	defaultMemberPermissions int64  = discordgo.PermissionManageServer // Caller permission to use commands
 	Commands                        = getLobbyCommandGroup()           // Command group
 )
+
+// TODO: consider using DB?
+var numMembers map[string]int = make(map[string]int)
 
 type LobbyCommands struct {
 	channelRepository repository.ChannelRepository
@@ -61,25 +58,63 @@ func (lc *LobbyCommands) HandleSlashCommands(discord *discordgo.Session, interac
 	}
 }
 
+func (lc *LobbyCommands) HandleVoiceServerUpdates(s *discordgo.Session, event *discordgo.VoiceServerUpdate) {
+
+}
+
 // FIXME: split into small functions
-func (lc *LobbyCommands) HandleVoiceUpdates(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
-	if vsu == nil {
+func (lc *LobbyCommands) HandleVoiceUpdates(s *discordgo.Session, event *discordgo.VoiceStateUpdate) {
+	channels, _ := lc.channelRepository.GetChannels()
+
+	if event.BeforeUpdate != nil && event.BeforeUpdate.ChannelID != "" {
+		for _, channel := range channels {
+			id := event.BeforeUpdate.ChannelID
+			if channel.Id == id {
+				numMembers[id]--
+			}
+		}
+	}
+
+	if event.VoiceState != nil && event.VoiceState.ChannelID != "" {
+		for _, channel := range channels {
+			id := event.VoiceState.ChannelID
+			if channel.Id == id {
+				numMembers[id]++
+			}
+		}
+	}
+
+	for channelId, memberCount := range numMembers {
+		if memberCount == 0 {
+			log.Println("Channel " + channelId + " is empty, deleting...")
+
+			_, err := s.ChannelDelete(channelId)
+			if err != nil {
+				log.Println("unable to to delete the channel! %w", err)
+				continue
+			}
+
+			lc.channelRepository.DeleteChannel(channelId)
+		}
+	}
+
+	if event == nil {
 		return
 	}
 
-	previousState := vsu.BeforeUpdate
-	if previousState != nil && previousState.ChannelID == vsu.ChannelID {
+	previousState := event.BeforeUpdate
+	if previousState != nil && previousState.ChannelID == event.ChannelID {
 		return
 	}
 
+	// TODO: verify that logic works as expected for all users
 	lobbies, _ := lc.lobbyRepository.GetLobbies()
-
 	for _, l := range lobbies {
-		if l.Id == vsu.ChannelID {
+		if l.Id == event.ChannelID {
 			log.Println("Searching for lobby...")
 
-			userName := vsu.Member.User.Username
-			nickname := vsu.Member.Nick
+			userName := event.Member.User.Username
+			nickname := event.Member.Nick
 			name := ""
 			if len(nickname) == 0 {
 				name = userName
@@ -120,35 +155,10 @@ func (lc *LobbyCommands) HandleVoiceUpdates(s *discordgo.Session, vsu *discordgo
 			lc.channelRepository.SetChannel(&channel)
 
 			log.Println("Created! Moving a user to the new channel...")
-			err = s.GuildMemberMove(GuildID, vsu.Member.User.ID, &newChannel.ID)
+			err = s.GuildMemberMove(GuildID, event.Member.User.ID, &newChannel.ID)
 			if err != nil {
 				log.Println("unable to move a user to the new channel! %w", err)
 				continue
-			}
-		}
-	}
-
-	if previousState != nil {
-		channels, _ := lc.channelRepository.GetChannels()
-		for _, tc := range channels {
-			if tc.Id == previousState.ChannelID {
-				channel, err := s.Channel(tc.Id)
-				if err != nil {
-					log.Println("unable to find a channel! %w", err)
-					continue
-				}
-
-				if len(channel.Members) == 0 {
-					log.Println("Channel " + channel.Name + " is empty, deleting...")
-
-					_, err := s.ChannelDelete(tc.Id)
-					if err != nil {
-						log.Println("unable to to delete the channel! %w", err)
-						continue
-					}
-
-					lc.channelRepository.DeleteChannel(tc.Id)
-				}
 			}
 		}
 	}
@@ -276,11 +286,11 @@ func (lc *LobbyCommands) getCommandHandlers() map[string]func(s *discordgo.Sessi
 	return map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		lobby: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			slashCommand := i.ApplicationCommandData().Options[0].Name
-			commandResponse := CommandResponse{
-				title: "🚨 Error",
-				description: "Oops, something went wrong.\n" +
+			commandResponse := model.CommandResponse{
+				Title: "🚨 Error",
+				Description: "Oops, something went wrong.\n" +
 					"Hol' up, you aren't supposed to see this message.",
-				colorType: color.Failure,
+				ColorType: color.Failure,
 			}
 
 			switch slashCommand {
@@ -301,9 +311,9 @@ func (lc *LobbyCommands) getCommandHandlers() map[string]func(s *discordgo.Sessi
 				Data: &discordgo.InteractionResponseData{
 					Embeds: []*discordgo.MessageEmbed{
 						{
-							Title:       commandResponse.title,
-							Description: commandResponse.description,
-							Color:       color.GetColorFrom(commandResponse.colorType),
+							Title:       commandResponse.Title,
+							Description: commandResponse.Description,
+							Color:       color.GetColorFrom(commandResponse.ColorType),
 						},
 					},
 					Flags: discordgo.MessageFlagsEphemeral,
@@ -313,7 +323,7 @@ func (lc *LobbyCommands) getCommandHandlers() map[string]func(s *discordgo.Sessi
 	}
 }
 
-func (lc *LobbyCommands) handleCommandRegister(s *discordgo.Session, i *discordgo.InteractionCreate) CommandResponse {
+func (lc *LobbyCommands) handleCommandRegister(s *discordgo.Session, i *discordgo.InteractionCreate) model.CommandResponse {
 	options := i.ApplicationCommandData().Options
 	channel := options[0].Options[0].ChannelValue(s)
 
@@ -326,47 +336,47 @@ func (lc *LobbyCommands) handleCommandRegister(s *discordgo.Session, i *discordg
 	if err != nil {
 		log.Println("unable to upsert the lobby! %w", err)
 
-		return CommandResponse{
-			title:       "🚨 Error",
-			description: "Lobby \"" + channel.Name + "\" cannot be registered.",
-			colorType:   color.Failure,
+		return model.CommandResponse{
+			Title:       "🚨 Error",
+			Description: "Lobby \"" + channel.Name + "\" cannot be registered.",
+			ColorType:   color.Failure,
 		}
 	}
 
 	if affectedRows == 0 {
-		return CommandResponse{
-			title:       "🧀 Warning",
-			description: "\"" + channel.Name + "\" is already registered as a lobby!",
-			colorType:   color.Warning,
+		return model.CommandResponse{
+			Title:       "🧀 Warning",
+			Description: "\"" + channel.Name + "\" is already registered as a lobby!",
+			ColorType:   color.Warning,
 		}
 	}
 
-	return CommandResponse{
-		title:       "✅ OK",
-		description: "Lobby \"" + channel.Name + "\" successfully registered.",
-		colorType:   color.Success,
+	return model.CommandResponse{
+		Title:       "✅ OK",
+		Description: "Lobby \"" + channel.Name + "\" successfully registered.",
+		ColorType:   color.Success,
 	}
 }
 
-func (lc *LobbyCommands) handleCommandCapacity(s *discordgo.Session, i *discordgo.InteractionCreate) CommandResponse {
+func (lc *LobbyCommands) handleCommandCapacity(s *discordgo.Session, i *discordgo.InteractionCreate) model.CommandResponse {
 	options := i.ApplicationCommandData().Options
 	channel := options[0].Options[0].ChannelValue(s)
 	capacity := options[0].Options[1].IntValue()
 
 	if capacity < 0 {
-		return CommandResponse{
-			title:       "🧀 Warning",
-			description: "User limit cannot be negative!",
-			colorType:   color.Warning,
+		return model.CommandResponse{
+			Title:       "🧀 Warning",
+			Description: "User limit cannot be negative!",
+			ColorType:   color.Warning,
 		}
 	}
 
 	_, err := lc.lobbyRepository.GetLobby(channel.ID)
 	if err == nil {
-		return CommandResponse{
-			title:       "🧀 Warning",
-			description: "\"" + channel.Name + "\" is not a lobby!",
-			colorType:   color.Warning,
+		return model.CommandResponse{
+			Title:       "🧀 Warning",
+			Description: "\"" + channel.Name + "\" is not a lobby!",
+			ColorType:   color.Warning,
 		}
 	}
 
@@ -383,39 +393,39 @@ func (lc *LobbyCommands) handleCommandCapacity(s *discordgo.Session, i *discordg
 	if err != nil {
 		log.Println("unable to update lobby! %w", err)
 
-		return CommandResponse{
-			title:       "🚨 Error",
-			description: "Unable to update lobby!",
-			colorType:   color.Failure,
+		return model.CommandResponse{
+			Title:       "🚨 Error",
+			Description: "Unable to update lobby!",
+			ColorType:   color.Failure,
 		}
 	}
 
 	if capacity == 0 {
-		return CommandResponse{
-			title:       "✅ OK",
-			description: "Capacity successfully reset for \"" + channel.Name + "\".",
-			colorType:   color.Success,
+		return model.CommandResponse{
+			Title:       "✅ OK",
+			Description: "Capacity successfully reset for \"" + channel.Name + "\".",
+			ColorType:   color.Success,
 		}
 	}
 
-	return CommandResponse{
-		title:       "✅ OK",
-		description: "Capacity " + strconv.FormatInt(capacity, 10) + " successfully set for \"" + channel.Name + "\".",
-		colorType:   color.Success,
+	return model.CommandResponse{
+		Title:       "✅ OK",
+		Description: "Capacity " + strconv.FormatInt(capacity, 10) + " successfully set for \"" + channel.Name + "\".",
+		ColorType:   color.Success,
 	}
 }
 
-func (lc *LobbyCommands) handleCommandName(s *discordgo.Session, i *discordgo.InteractionCreate) CommandResponse {
+func (lc *LobbyCommands) handleCommandName(s *discordgo.Session, i *discordgo.InteractionCreate) model.CommandResponse {
 	options := i.ApplicationCommandData().Options
 	channel := options[0].Options[0].ChannelValue(s)
 	name := options[0].Options[1].StringValue()
 
 	_, err := lc.lobbyRepository.GetLobby(channel.ID)
 	if err == nil {
-		return CommandResponse{
-			title:       "🧀 Warning",
-			description: "\"" + channel.Name + "\" is not a lobby!",
-			colorType:   color.Warning,
+		return model.CommandResponse{
+			Title:       "🧀 Warning",
+			Description: "\"" + channel.Name + "\" is not a lobby!",
+			ColorType:   color.Warning,
 		}
 	}
 
@@ -432,29 +442,29 @@ func (lc *LobbyCommands) handleCommandName(s *discordgo.Session, i *discordgo.In
 	if err != nil {
 		log.Println("unable to update lobby! %w", err)
 
-		return CommandResponse{
-			title:       "🚨 Error",
-			description: "Unable to update lobby!",
-			colorType:   color.Failure,
+		return model.CommandResponse{
+			Title:       "🚨 Error",
+			Description: "Unable to update lobby!",
+			ColorType:   color.Failure,
 		}
 	}
 
-	return CommandResponse{
-		title:       "✅ OK",
-		description: "Name " + name + " successfully set for " + channel.Name + ".",
-		colorType:   color.Success,
+	return model.CommandResponse{
+		Title:       "✅ OK",
+		Description: "Name " + name + " successfully set for " + channel.Name + ".",
+		ColorType:   color.Success,
 	}
 }
 
-func (lc *LobbyCommands) handleCommandList(s *discordgo.Session, i *discordgo.InteractionCreate) CommandResponse {
+func (lc *LobbyCommands) handleCommandList(s *discordgo.Session, i *discordgo.InteractionCreate) model.CommandResponse {
 	lobbies, err := lc.lobbyRepository.GetLobbies()
 	if err != nil {
 		log.Println("unable to get lobbies! %w", err)
 
-		return CommandResponse{
-			title:       "🚨 Error",
-			description: "Unable to get lobbies!",
-			colorType:   color.Failure,
+		return model.CommandResponse{
+			Title:       "🚨 Error",
+			Description: "Unable to get lobbies!",
+			ColorType:   color.Failure,
 		}
 	}
 
@@ -464,10 +474,10 @@ func (lc *LobbyCommands) handleCommandList(s *discordgo.Session, i *discordgo.In
 		if err != nil {
 			log.Println("unable to get channels! %w", err)
 
-			return CommandResponse{
-				title:       "🚨 Error",
-				description: "Unable to get channels!",
-				colorType:   color.Failure,
+			return model.CommandResponse{
+				Title:       "🚨 Error",
+				Description: "Unable to get channels!",
+				ColorType:   color.Failure,
 			}
 		}
 		if channel.ID == lobby.Id {
@@ -494,21 +504,21 @@ func (lc *LobbyCommands) handleCommandList(s *discordgo.Session, i *discordgo.In
 	}
 
 	if len(registeredChannels) == 0 {
-		return CommandResponse{
-			title:       "🧀 Warning",
-			description: "There are no active lobbies.",
-			colorType:   color.Warning,
+		return model.CommandResponse{
+			Title:       "🧀 Warning",
+			Description: "There are no active lobbies.",
+			ColorType:   color.Warning,
 		}
 	}
 
-	return CommandResponse{
-		title:       "✅ OK",
-		description: "Active Lobbies:\n" + strings.Join(registeredChannels, "\n"),
-		colorType:   color.Success,
+	return model.CommandResponse{
+		Title:       "✅ OK",
+		Description: "Active Lobbies:\n" + strings.Join(registeredChannels, "\n"),
+		ColorType:   color.Success,
 	}
 }
 
-func (lc *LobbyCommands) handleCommandRemove(s *discordgo.Session, i *discordgo.InteractionCreate) CommandResponse {
+func (lc *LobbyCommands) handleCommandRemove(s *discordgo.Session, i *discordgo.InteractionCreate) model.CommandResponse {
 	options := i.ApplicationCommandData().Options
 	channel := options[0].Options[0].ChannelValue(s)
 
@@ -516,24 +526,24 @@ func (lc *LobbyCommands) handleCommandRemove(s *discordgo.Session, i *discordgo.
 	if err != nil {
 		log.Println("unable to delete the lobby! %w", err)
 
-		return CommandResponse{
-			title:       "🚨 Error",
-			description: "Unable unregister \"" + channel.Name + "\" lobby.",
-			colorType:   color.Failure,
+		return model.CommandResponse{
+			Title:       "🚨 Error",
+			Description: "Unable unregister \"" + channel.Name + "\" lobby.",
+			ColorType:   color.Failure,
 		}
 	}
 
 	if affectedRows == 0 {
-		return CommandResponse{
-			title:       "🧀 Warning",
-			description: "\"" + channel.Name + "\" is not a lobby!",
-			colorType:   color.Warning,
+		return model.CommandResponse{
+			Title:       "🧀 Warning",
+			Description: "\"" + channel.Name + "\" is not a lobby!",
+			ColorType:   color.Warning,
 		}
 	}
 
-	return CommandResponse{
-		title:       "✅ OK",
-		description: "Lobby \"" + channel.Name + "\" successfully unregistered.",
-		colorType:   color.Success,
+	return model.CommandResponse{
+		Title:       "✅ OK",
+		Description: "Lobby \"" + channel.Name + "\" successfully unregistered.",
+		ColorType:   color.Success,
 	}
 }
