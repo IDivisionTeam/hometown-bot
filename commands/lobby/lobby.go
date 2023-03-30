@@ -27,9 +27,9 @@ const (
 )
 
 var (
-	dmPermission             bool   = false                            // Does not allow using Bot in DMs
-	defaultMemberPermissions int64  = discordgo.PermissionManageServer // Caller permission to use commands
-	Commands                        = getLobbyCommandGroup()           // Command group
+	dmPermission             bool  = false                            // Does not allow using Bot in DMs
+	defaultMemberPermissions int64 = discordgo.PermissionManageServer // Caller permission to use commands
+	Commands                       = getLobbyCommandGroup()           // Command group
 )
 
 // TODO: consider using DB?
@@ -55,10 +55,6 @@ func (lc *LobbyCommands) HandleSlashCommands(discord *discordgo.Session, interac
 	if handler, ok := lc.commandHandlers[interaction.ApplicationCommandData().Name]; ok {
 		handler(discord, interaction)
 	}
-}
-
-func (lc *LobbyCommands) HandleVoiceDelete(s *discordgo.Session, event *discordgo.ChannelDelete) {
-
 }
 
 // FIXME: split into small functions
@@ -93,7 +89,12 @@ func (lc *LobbyCommands) HandleVoiceUpdates(s *discordgo.Session, event *discord
 				continue
 			}
 
-			lc.channelRepository.DeleteChannel(channelId)
+			delete(numMembers, channelId)
+			err = lc.channelRepository.DeleteChannel(channelId)
+			if err != nil {
+				log.Println("unable to to delete the channel! %w", err)
+				return
+			}
 		}
 	}
 
