@@ -3,6 +3,7 @@ package bot
 import (
 	"fmt"
 	"hometown-bot/commands/lobby"
+	"hometown-bot/commands/reset"
 	"hometown-bot/repository"
 	"log"
 	"os"
@@ -35,9 +36,11 @@ func (bot *Bot) Run() error {
 	}
 
 	lobbyCommands := lobby.New(bot.channelRepository, bot.lobbyRepository)
+	resetCommands := reset.New(bot.channelRepository, bot.lobbyRepository)
 
 	log.Println("Bot created! Attaching handlers...")
 	discord.AddHandler(lobbyCommands.HandleSlashCommands)
+	discord.AddHandler(resetCommands.HandleSlashCommands)
 	discord.AddHandler(lobbyCommands.HandleVoiceUpdates)
 
 	discord.Open()
@@ -65,8 +68,10 @@ func (bot *Bot) Run() error {
 }
 
 func createCommands(discord *discordgo.Session) ([]*discordgo.ApplicationCommand, error) {
-	registeredCommands := make([]*discordgo.ApplicationCommand, len(lobby.Commands))
-	for i, v := range lobby.Commands {
+	joinedCommands := append(lobby.Commands, reset.Commands...)
+
+	registeredCommands := make([]*discordgo.ApplicationCommand, len(joinedCommands))
+	for i, v := range joinedCommands {
 		cmd, err := discord.ApplicationCommandCreate(discord.State.User.ID, discord.State.Application.GuildID, v)
 		if err != nil {
 			return nil, fmt.Errorf("cannot create '%s' command: %w", v.Name, err)

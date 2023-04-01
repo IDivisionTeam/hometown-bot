@@ -363,10 +363,10 @@ func (lc *LobbyCommands) handleCommandCapacity(s *discordgo.Session, i *discordg
 	channel := options[0].Options[0].ChannelValue(s)
 	capacity := options[0].Options[1].IntValue()
 
-	if capacity < 0 {
+	if capacity <= 0 {
 		return model.CommandResponse{
 			Title:       "🧀 Warning",
-			Description: "User limit cannot be negative!",
+			Description: "User limit cannot be negative or zero!",
 			ColorType:   color.Warning,
 		}
 	}
@@ -400,14 +400,6 @@ func (lc *LobbyCommands) handleCommandCapacity(s *discordgo.Session, i *discordg
 		}
 	}
 
-	if capacity == 0 {
-		return model.CommandResponse{
-			Title:       "✅ OK",
-			Description: "Capacity successfully reset for \"" + channel.Name + "\".",
-			ColorType:   color.Success,
-		}
-	}
-
 	return model.CommandResponse{
 		Title:       "✅ OK",
 		Description: "Capacity " + strconv.FormatInt(capacity, 10) + " successfully set for \"" + channel.Name + "\".",
@@ -429,23 +421,13 @@ func (lc *LobbyCommands) handleCommandName(s *discordgo.Session, i *discordgo.In
 		}
 	}
 
-	var template sql.NullString
-	if strings.Contains(name, "^default^") {
-		template = sql.NullString{
-			Valid: true,
-			String: "",
-		}
-	} else {
-		template = sql.NullString{
-			Valid:  true,
-			String: name,
-		}
-	}
-
 	lobby := model.Lobby{
 		Id:         channel.ID,
 		CategoryID: channel.ParentID,
-		Template:   template,
+		Template: sql.NullString{
+			Valid:  true,
+			String: name,
+		},
 	}
 
 	err = lc.lobbyRepository.UpsertLobby(&lobby)
@@ -456,14 +438,6 @@ func (lc *LobbyCommands) handleCommandName(s *discordgo.Session, i *discordgo.In
 			Title:       "🚨 Error",
 			Description: "Unable to update lobby!",
 			ColorType:   color.Failure,
-		}
-	}
-
-	if strings.Contains(name, "^default^") {
-		return model.CommandResponse{
-			Title:       "✅ OK",
-			Description: "Name successfully reset to default for " + channel.Name + ".",
-			ColorType:   color.Success,
 		}
 	}
 
