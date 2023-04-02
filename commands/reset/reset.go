@@ -154,7 +154,7 @@ func (rc *ResetCommands) handleCommandCapacity(s *discordgo.Session, i *discordg
 	options := i.ApplicationCommandData().Options
 	channel := options[0].Options[0].Options[0].ChannelValue(s)
 
-	_, err := rc.lobbyRepository.GetLobby(channel.ID)
+	_, err := rc.lobbyRepository.GetLobby(channel.ID, i.GuildID)
 	if err == nil {
 		return model.CommandResponse{
 			Title:       "🧀 Warning",
@@ -194,7 +194,7 @@ func (rc *ResetCommands) handleCommandName(s *discordgo.Session, i *discordgo.In
 	options := i.ApplicationCommandData().Options
 	channel := options[0].Options[0].Options[0].ChannelValue(s)
 
-	_, err := rc.lobbyRepository.GetLobby(channel.ID)
+	_, err := rc.lobbyRepository.GetLobby(channel.ID, i.GuildID)
 	if err == nil {
 		return model.CommandResponse{
 			Title:       "🧀 Warning",

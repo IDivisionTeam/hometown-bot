@@ -11,6 +11,7 @@ var lobbyTable = `
 CREATE TABLE IF NOT EXISTS lobbies(
 	id TEXT PRIMARY KEY,
 	category_id TEXT, 		/* immutable */
+	guild_id TEXT, 		/* immutable */
 	template TEXT,			/* mutable, default NULL */
 	capacity INTEGER		/* mutable, default NULL */
 );`

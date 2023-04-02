@@ -8,6 +8,7 @@ import (
 type Lobby struct {
 	Id         string
 	CategoryID string
+	GuildID    string
 	Template   sql.NullString
 	Capacity   sql.NullInt32
 }

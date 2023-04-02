@@ -108,7 +108,7 @@ func (lc *LobbyCommands) HandleVoiceUpdates(s *discordgo.Session, event *discord
 	}
 
 	// TODO: verify that logic works as expected for all users
-	lobbies, _ := lc.lobbyRepository.GetLobbies()
+	lobbies, _ := lc.lobbyRepository.GetLobbies(event.GuildID)
 	for _, l := range lobbies {
 		if l.Id == event.ChannelID {
 			log.Println("Searching for lobby...")
@@ -330,6 +330,7 @@ func (lc *LobbyCommands) handleCommandRegister(s *discordgo.Session, i *discordg
 	lobby := model.Lobby{
 		Id:         channel.ID,
 		CategoryID: channel.ParentID,
+		GuildID:    i.GuildID,
 	}
 
 	affectedRows, err := lc.lobbyRepository.SetLobby(&lobby)
@@ -371,7 +372,7 @@ func (lc *LobbyCommands) handleCommandCapacity(s *discordgo.Session, i *discordg
 		}
 	}
 
-	_, err := lc.lobbyRepository.GetLobby(channel.ID)
+	_, err := lc.lobbyRepository.GetLobby(channel.ID, i.GuildID)
 	if err == nil {
 		return model.CommandResponse{
 			Title:       "🧀 Warning",
@@ -412,7 +413,7 @@ func (lc *LobbyCommands) handleCommandName(s *discordgo.Session, i *discordgo.In
 	channel := options[0].Options[0].ChannelValue(s)
 	name := options[0].Options[1].StringValue()
 
-	_, err := lc.lobbyRepository.GetLobby(channel.ID)
+	_, err := lc.lobbyRepository.GetLobby(channel.ID, i.GuildID)
 	if err == nil {
 		return model.CommandResponse{
 			Title:       "🧀 Warning",
@@ -449,7 +450,7 @@ func (lc *LobbyCommands) handleCommandName(s *discordgo.Session, i *discordgo.In
 }
 
 func (lc *LobbyCommands) handleCommandList(s *discordgo.Session, i *discordgo.InteractionCreate) model.CommandResponse {
-	lobbies, err := lc.lobbyRepository.GetLobbies()
+	lobbies, err := lc.lobbyRepository.GetLobbies(i.GuildID)
 	if err != nil {
 		log.Println("unable to get lobbies! %w", err)
 
@@ -514,7 +515,7 @@ func (lc *LobbyCommands) handleCommandRemove(s *discordgo.Session, i *discordgo.
 	options := i.ApplicationCommandData().Options
 	channel := options[0].Options[0].ChannelValue(s)
 
-	affectedRows, err := lc.lobbyRepository.DeleteLobby(channel.ID)
+	affectedRows, err := lc.lobbyRepository.DeleteLobby(channel.ID, i.GuildID)
 	if err != nil {
 		log.Println("unable to delete the lobby! %w", err)
 
