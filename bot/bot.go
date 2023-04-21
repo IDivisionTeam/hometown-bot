@@ -32,7 +32,7 @@ func Create(channelRepository repository.ChannelRepository, lobbyRepository repo
 func (bot *Bot) Run() error {
 	discord, err := discordgo.New("Bot " + BotToken)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create a new bot session: %w", err)
 	}
 
 	lobbyCommands := lobby.New(bot.channelRepository, bot.lobbyRepository)
@@ -43,12 +43,15 @@ func (bot *Bot) Run() error {
 	discord.AddHandler(resetCommands.HandleSlashCommands)
 	discord.AddHandler(lobbyCommands.HandleVoiceUpdates)
 
-	discord.Open()
+	err = discord.Open()
+	if err != nil {
+		return fmt.Errorf("unable to create socket: %w", err)
+	}
 
 	log.Println("Websocket open! Creating commands...")
 	registeredCommands, err := createCommands(discord)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to register bot commands: %w", err)
 	}
 
 	defer discord.Close()
@@ -61,7 +64,7 @@ func (bot *Bot) Run() error {
 	log.Println("Bot stopped! Removing slash commands...")
 	err = removeSlashCommands(discord, registeredCommands)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to remove bot commands: %w", err)
 	}
 
 	return nil
