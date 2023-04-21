@@ -18,14 +18,20 @@ var (
 )
 
 type Bot struct {
-	channelRepository repository.ChannelRepository
-	lobbyRepository   repository.LobbyRepository
+	channelRepository        repository.ChannelRepository
+	channelMembersRepository repository.ChannelMembersRepository
+	lobbyRepository          repository.LobbyRepository
 }
 
-func Create(channelRepository repository.ChannelRepository, lobbyRepository repository.LobbyRepository) *Bot {
+func Create(
+	channelRepository repository.ChannelRepository,
+	channelMembersRepository repository.ChannelMembersRepository,
+	lobbyRepository repository.LobbyRepository,
+) *Bot {
 	return &Bot{
-		channelRepository: channelRepository,
-		lobbyRepository:   lobbyRepository,
+		channelRepository:        channelRepository,
+		channelMembersRepository: channelMembersRepository,
+		lobbyRepository:          lobbyRepository,
 	}
 }
 
@@ -35,7 +41,7 @@ func (bot *Bot) Run() error {
 		return fmt.Errorf("unable to create a new bot session: %w", err)
 	}
 
-	lobbyCommands := lobby.New(bot.channelRepository, bot.lobbyRepository)
+	lobbyCommands := lobby.New(bot.channelRepository, bot.channelMembersRepository, bot.lobbyRepository)
 	resetCommands := reset.New(bot.channelRepository, bot.lobbyRepository)
 
 	log.Println("Bot created! Attaching handlers...")

@@ -32,18 +32,21 @@ var (
 	Commands                       = getLobbyCommandGroup()           // Command group
 )
 
-// TODO: consider using DB?
-var numMembers map[string]int = make(map[string]int)
-
 type LobbyCommands struct {
-	channelRepository repository.ChannelRepository
-	lobbyRepository   repository.LobbyRepository
-	commandHandlers   map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate) // Command interaction
+	channelRepository        repository.ChannelRepository
+	channelMembersRepository repository.ChannelMembersRepository
+	lobbyRepository          repository.LobbyRepository
+	commandHandlers          map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate) // Command interaction
 }
 
-func New(channelRepository repository.ChannelRepository, lobbyRepository repository.LobbyRepository) *LobbyCommands {
+func New(
+	channelRepository repository.ChannelRepository,
+	channelMembersRepository repository.ChannelMembersRepository,
+	lobbyRepository repository.LobbyRepository,
+) *LobbyCommands {
 	commands := LobbyCommands{
 		channelRepository: channelRepository,
+		channelMembersRepository: channelMembersRepository,
 		lobbyRepository:   lobbyRepository,
 	}
 
@@ -63,37 +66,69 @@ func (lc *LobbyCommands) HandleVoiceUpdates(s *discordgo.Session, event *discord
 
 	if event.BeforeUpdate != nil && event.BeforeUpdate.ChannelID != "" {
 		for _, channel := range channels {
-			id := event.BeforeUpdate.ChannelID
-			if channel.Id == id {
-				numMembers[id]--
+			channelId := event.BeforeUpdate.ChannelID
+			if channel.Id == channelId {
+				userId := event.VoiceState.Member.User.ID
+				err := lc.channelMembersRepository.DeleteChannelMember(event.GuildID, userId)
+				if err != nil {
+					log.Printf("delete member count for channel %s by user %s: ", channelId, userId)
+					log.Print(err)
+				}
 			}
 		}
 	}
 
 	if event.VoiceState != nil && event.VoiceState.ChannelID != "" {
 		for _, channel := range channels {
-			id := event.VoiceState.ChannelID
-			if channel.Id == id {
-				numMembers[id]++
+			channelId := event.VoiceState.ChannelID
+			if channel.Id == channelId {
+				userId := event.VoiceState.Member.User.ID
+				err := lc.channelMembersRepository.SetChannelMember(event.GuildID, userId, channelId)
+				if err != nil {
+					log.Printf("insert member count for channel %s by user %s: ", channelId, userId)
+					log.Print(err)
+				}
 			}
 		}
 	}
 
-	for channelId, memberCount := range numMembers {
-		if memberCount == 0 {
-			log.Println("Channel " + channelId + " is empty, deleting...")
+	channels, err := lc.channelRepository.GetChannels()
+	if err != nil {
+		log.Println("get channels from db: %w", err)
+	}
 
-			_, err := s.ChannelDelete(channelId)
+	for _, channel := range channels {
+		channelMembersCount, err := lc.channelMembersRepository.GetChannelMembersCount(event.GuildID, channel.Id)
+		switch {
+		case err == sql.ErrNoRows:
+			continue
+		case err != nil:
+			log.Println("get channel members count from db: %w", err)
+			continue
+		}
+
+		if channelMembersCount == 0 {
+			log.Println("Channel " + channel.Id + " is empty, deleting...")
+
+			_, err := s.ChannelDelete(channel.Id)
 			if err != nil {
-				log.Println("unable to to delete the channel! %w", err)
+				log.Printf("unable to delete channel %s: ", channel.Id)
+				log.Print(err)
 				continue
 			}
 
-			delete(numMembers, channelId)
-			err = lc.channelRepository.DeleteChannel(channelId)
+			err = lc.channelRepository.DeleteChannel(channel.Id)
 			if err != nil {
-				log.Println("unable to to delete the channel! %w", err)
-				return
+				log.Printf("unable to delete local channel %s: ", channel.Id)
+				log.Print(err)
+				continue
+			}
+
+			err = lc.channelMembersRepository.DeleteChannelMembers(event.GuildID, channel.Id)
+			if err != nil {
+				log.Printf("unable to delete local channel members %s: ", channel.Id)
+				log.Print(err)
+				continue
 			}
 		}
 	}

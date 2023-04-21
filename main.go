@@ -23,10 +23,11 @@ func main() {
 	defer db.Close()
 
 	channelRepository := repository.NewChannelRepository(db)
+	channelMembersRepository := repository.NewChannelMembersRepository(db)
 	lobbyRepository := repository.NewLobbyRepository(db)
 
 	bot.BotToken = botToken
-	b := bot.Create(*channelRepository, *lobbyRepository)
+	b := bot.Create(*channelRepository, *channelMembersRepository, *lobbyRepository)
 
 	err = b.Run()
 	if err != nil {
