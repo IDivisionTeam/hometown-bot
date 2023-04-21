@@ -51,7 +51,7 @@ func (cmr *ChannelMembersRepository) SetChannelMember(guildId string, userId str
 
 const DeleteChannelMember = `
 DELETE FROM channel_members
-WHERE guild_id = ? AND user_id = ?
+WHERE (guild_id = ? AND user_id = ?)
 `
 
 func (cmr *ChannelMembersRepository) DeleteChannelMember(guildId string, userId string) error {
@@ -64,7 +64,7 @@ func (cmr *ChannelMembersRepository) DeleteChannelMember(guildId string, userId 
 
 const DeleteChannelMembers = `
 DELETE FROM channel_members
-WHERE guild_id = ? AND channel_id = ?
+WHERE (guild_id = ? AND channel_id = ?)
 `
 
 func (cmr *ChannelMembersRepository) DeleteChannelMembers(guildId string, channelId string) error {
