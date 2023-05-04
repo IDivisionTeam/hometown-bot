@@ -31,6 +31,7 @@ jobs:
       
   deploy:
      runs-on: fuji  
+     needs: build
      steps:
      - uses: actions/checkout@v3
      
