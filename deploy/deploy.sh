@@ -2,7 +2,7 @@
 
 set -Eeuo pipefail
 
-chmod +x main
+echo $APP_DIR > test.txt
 cp main $APP_DIR/
 
 systemctl enable ./app.service
