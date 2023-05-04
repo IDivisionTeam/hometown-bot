@@ -41,6 +41,8 @@ jobs:
          key: build
      
      - name: Deploy   
+       env:
+          APP_DIR: ${{ secrets.APP_DIR }}
        run: ./deploy/deploy.sh
      
 
