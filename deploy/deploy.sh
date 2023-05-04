@@ -4,6 +4,6 @@ set -Eeuo pipefail
 
 cp main $APP_DIR/
 
-systemctl enable $APP_DIR/app.service
-systemctl restart hometown-bot
-systemctl daemon-reload
+sudo systemctl enable $APP_DIR/hometown-bot.service
+sudo systemctl restart hometown-bot
+sudo systemctl daemon-reload
