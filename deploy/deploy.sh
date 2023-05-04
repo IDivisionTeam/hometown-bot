@@ -4,5 +4,5 @@ set -Eeuo pipefail
 
 cp main $APP_DIR/
 
-systemctl daemon-reload
-systemctl restart hometown-bot
+sudo systemctl daemon-reload
+sudo systemctl restart hometown-bot
