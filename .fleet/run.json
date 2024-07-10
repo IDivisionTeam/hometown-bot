@@ -5,9 +5,13 @@
       "type": "command",
       "program": "/usr/local/go/bin/go",
       "environment": {
-      "BOT_TOKEN": ""
+        "BOT_TOKEN": ""
       },
-      "args": ["run", "-tags=devbuild", "$PROJECT_DIR$/main.go"]
+      "args": [
+        "run",
+        "-tags=devbuild",
+        "$PROJECT_DIR$/main.go"
+      ]
     },
     {
       "name": "Run Release",
@@ -16,7 +20,10 @@
       "environment": {
         "BOT_TOKEN": ""
       },
-      "args": ["run", "$PROJECT_DIR$/main.go"]
+      "args": [
+        "run",
+        "$PROJECT_DIR$/main.go"
+      ]
     }
   ]
 }

@@ -1,11 +1,11 @@
 package storage
 
 import (
-	"database/sql"
-	"fmt"
-	"log"
+    "database/sql"
+    "fmt"
+    "log"
 
-	_ "github.com/mattn/go-sqlite3"
+    _ "github.com/mattn/go-sqlite3"
 )
 
 var lobbyTable = `
@@ -31,31 +31,31 @@ CREATE TABLE IF NOT EXISTS channel_members(
 );`
 
 func Load() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "./storage.db")
-	if err != nil {
-		return nil, fmt.Errorf("open sql: %w", err)
-	}
+    db, err := sql.Open("sqlite3", "./storage.db")
+    if err != nil {
+        return nil, fmt.Errorf("open sql: %w", err)
+    }
 
-	_, err = db.Exec(lobbyTable)
-	if err != nil {
-		return nil, fmt.Errorf("create lobby table: %w", err)
-	}
+    _, err = db.Exec(lobbyTable)
+    if err != nil {
+        return nil, fmt.Errorf("create lobby table: %w", err)
+    }
 
-	_, err = db.Exec(channelTable)
-	if err != nil {
-		return nil, fmt.Errorf("create channel table: %w", err)
-	}
+    _, err = db.Exec(channelTable)
+    if err != nil {
+        return nil, fmt.Errorf("create channel table: %w", err)
+    }
 
-	_, err = db.Exec(channelMembersTable)
-	if err != nil {
-		return nil, fmt.Errorf("create channel members table: %w", err)
-	}
+    _, err = db.Exec(channelMembersTable)
+    if err != nil {
+        return nil, fmt.Errorf("create channel members table: %w", err)
+    }
 
-	err = db.Ping()
-	if err != nil {
-		return nil, fmt.Errorf("verify db connection: %w", err)
-	}
+    err = db.Ping()
+    if err != nil {
+        return nil, fmt.Errorf("verify db connection: %w", err)
+    }
 
-	log.Println("Storage loaded!")
-	return db, nil
+    log.Println("Storage loaded!")
+    return db, nil
 }

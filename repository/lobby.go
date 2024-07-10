@@ -1,17 +1,17 @@
 package repository
 
 import (
-	"database/sql"
-	"fmt"
-	"hometown-bot/model"
+    "database/sql"
+    "fmt"
+    "hometown-bot/model"
 )
 
 type LobbyRepository struct {
-	db *sql.DB
+    db *sql.DB
 }
 
-func NewLobbyRepository(db *sql.DB) *LobbyRepository {
-	return &LobbyRepository{db: db}
+func NewLobby(db *sql.DB) *LobbyRepository {
+    return &LobbyRepository{db: db}
 }
 
 const SelectLobbyById = `
@@ -21,21 +21,21 @@ WHERE (id = ? AND guild_id = ?)
 `
 
 func (cr *LobbyRepository) GetLobby(id string, guildId string) (model.Lobby, error) {
-	var lobby model.Lobby
+    var lobby model.Lobby
 
-	err := cr.db.QueryRow(
-		SelectLobbyById,
-		&lobby.Id,
-		&lobby.Template,
-		&lobby.Capacity,
-		&lobby.CategoryID,
-		&lobby.GuildID,
-	).Scan()
-	if err != nil {
-		return model.Lobby{}, fmt.Errorf("unable to get lobby for id %s: %w", id, err)
-	}
+    err := cr.db.QueryRow(
+        SelectLobbyById,
+        &lobby.Id,
+        &lobby.Template,
+        &lobby.Capacity,
+        &lobby.CategoryID,
+        &lobby.GuildID,
+    ).Scan()
+    if err != nil {
+        return model.Lobby{}, fmt.Errorf("unable to get lobby for id %s: %w", id, err)
+    }
 
-	return lobby, nil
+    return lobby, nil
 }
 
 const SelectLobbies = `
@@ -45,32 +45,32 @@ WHERE guild_id = ?
 `
 
 func (cr *LobbyRepository) GetLobbies(guildId string) ([]model.Lobby, error) {
-	rows, err := cr.db.Query(SelectLobbies, guildId)
-	if err != nil {
-		return []model.Lobby{}, fmt.Errorf("unable to get lobbies: %w", err)
-	}
+    rows, err := cr.db.Query(SelectLobbies, guildId)
+    if err != nil {
+        return []model.Lobby{}, fmt.Errorf("unable to get lobbies: %w", err)
+    }
 
-	defer rows.Close()
+    defer rows.Close()
 
-	var lobbies []model.Lobby
-	for rows.Next() {
-		var lobby model.Lobby
+    var lobbies []model.Lobby
+    for rows.Next() {
+        var lobby model.Lobby
 
-		err = rows.Scan(
-			&lobby.Id,
-			&lobby.Template,
-			&lobby.Capacity,
-			&lobby.CategoryID,
-			&lobby.GuildID,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("unable to get lobbies: %w", err)
-		}
+        err = rows.Scan(
+            &lobby.Id,
+            &lobby.Template,
+            &lobby.Capacity,
+            &lobby.CategoryID,
+            &lobby.GuildID,
+        )
+        if err != nil {
+            return nil, fmt.Errorf("unable to get lobbies: %w", err)
+        }
 
-		lobbies = append(lobbies, lobby)
-	}
+        lobbies = append(lobbies, lobby)
+    }
 
-	return lobbies, nil
+    return lobbies, nil
 }
 
 const ReplaceLobby = `
@@ -82,26 +82,26 @@ DO NOTHING
 `
 
 func (cr *LobbyRepository) SetLobby(lobby *model.Lobby) (int64, error) {
-	result, err := cr.db.Exec(
-		ReplaceLobby,
-		lobby.Id,
-		lobby.Template,
-		lobby.Capacity,
-		lobby.CategoryID,
-		lobby.GuildID,
-		lobby.Id,
-		lobby.GuildID,
-	)
-	if err != nil {
-		return 0, err
-	}
+    result, err := cr.db.Exec(
+        ReplaceLobby,
+        lobby.Id,
+        lobby.Template,
+        lobby.Capacity,
+        lobby.CategoryID,
+        lobby.GuildID,
+        lobby.Id,
+        lobby.GuildID,
+    )
+    if err != nil {
+        return 0, err
+    }
 
-	affectedRows, err := result.RowsAffected()
-	if err != nil {
-		return 0, err
-	}
+    affectedRows, err := result.RowsAffected()
+    if err != nil {
+        return 0, err
+    }
 
-	return affectedRows, nil
+    return affectedRows, nil
 }
 
 const UpsertLobby = `
@@ -115,17 +115,17 @@ SET
 `
 
 func (cr *LobbyRepository) UpsertLobby(lobby *model.Lobby) error {
-	_, err := cr.db.Exec(
-		UpsertLobby,
-		lobby.Id,
-		lobby.Template,
-		lobby.Capacity,
-	)
-	if err != nil {
-		return err
-	}
+    _, err := cr.db.Exec(
+        UpsertLobby,
+        lobby.Id,
+        lobby.Template,
+        lobby.Capacity,
+    )
+    if err != nil {
+        return err
+    }
 
-	return nil
+    return nil
 }
 
 const DeleteLobby = `
@@ -134,15 +134,15 @@ WHERE (id = ? AND guild_id = ?)
 `
 
 func (cr *LobbyRepository) DeleteLobby(id string, guildId string) (int64, error) {
-	result, err := cr.db.Exec(DeleteLobby, id, guildId)
-	if err != nil {
-		return 0, fmt.Errorf("unable to delete lobby for id %s: %w", id, err)
-	}
+    result, err := cr.db.Exec(DeleteLobby, id, guildId)
+    if err != nil {
+        return 0, fmt.Errorf("unable to delete lobby for id %s: %w", id, err)
+    }
 
-	affectedRows, err := result.RowsAffected()
-	if err != nil {
-		return 0, err
-	}
+    affectedRows, err := result.RowsAffected()
+    if err != nil {
+        return 0, err
+    }
 
-	return affectedRows, nil
+    return affectedRows, nil
 }
