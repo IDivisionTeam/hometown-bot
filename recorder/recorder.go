@@ -2,6 +2,7 @@ package recorder
 
 import (
     "github.com/fatih/color"
+    "hometown-bot/build"
     "hometown-bot/util"
     "log"
 )
@@ -41,14 +42,17 @@ func (i *InfoRecorder) println(v ...any) {
 }
 
 func (i *DebugRecorder) print(v ...any) {
+    if !build.IsDebug { return }
     i.logger.Print(util.WrapInColor(color.FgGreen, v...))
 }
 
 func (i *DebugRecorder) printf(format string, v ...any) {
+    if !build.IsDebug { return }
     i.logger.Print(util.WrapInColorf(color.FgGreen, format, v...))
 }
 
 func (i *DebugRecorder) println(v ...any) {
+    if !build.IsDebug { return }
     i.logger.Print(util.WrapInColorln(color.FgGreen, v...))
 }
 
