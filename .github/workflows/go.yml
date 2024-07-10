@@ -14,35 +14,35 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-    - name: Set up Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: '1.20'
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.22.3'
 
-    - name: Build
-      run: go build main.go
-      
-    - uses: actions/cache@v3
-      with:
-        path: ./main
-        key: build
-      
+      - name: Build
+        run: go build main.go
+
+      - uses: actions/cache@v3
+        with:
+          path: ./main
+          key: build
+
   deploy:
-     runs-on: fuji  
-     needs: build
-     steps:
-     - uses: actions/checkout@v3
-     
-     - uses: actions/cache@v3
-       with:
-         path: ./main
-         key: build
-     
-     - name: Deploy  
-       env:
+    runs-on: fuji
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/cache@v3
+        with:
+          path: ./main
+          key: build
+
+      - name: Deploy
+        env:
           APP_DIR: ${{ secrets.APP_DIR }}
-       run: ./deploy/deploy.sh
-     
+        run: ./deploy/deploy.sh
+
 
