@@ -1,0 +1,22 @@
+{
+  "configurations": [
+    {
+      "name": "Run Debug",
+      "type": "command",
+      "program": "/usr/local/go/bin/go",
+      "environment": {
+      "BOT_TOKEN": ""
+      },
+      "args": ["run", "-tags=devbuild", "$PROJECT_DIR$/main.go"]
+    },
+    {
+      "name": "Run Release",
+      "type": "command",
+      "program": "/usr/local/go/bin/go",
+      "environment": {
+        "BOT_TOKEN": ""
+      },
+      "args": ["run", "$PROJECT_DIR$/main.go"]
+    }
+  ]
+}
