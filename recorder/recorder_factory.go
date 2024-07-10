@@ -23,12 +23,9 @@ var (
 
 func createRecorders() {
     loggers[INFO] = newInfoRecorder()
+    loggers[DEBUG] = newDebugRecorder()
     loggers[WARN] = newWarningRecorder()
     loggers[ERROR] = newErrorRecorder()
-
-    if build.IsDebug {
-        loggers[DEBUG] = newDebugRecorder()
-    }
 }
 
 func newInfoRecorder() Recorder {
@@ -38,9 +35,13 @@ func newInfoRecorder() Recorder {
 }
 
 func newDebugRecorder() Recorder {
-    return &InfoRecorder{
-        logger: log.New(os.Stdout, "DEBUG: ", log.Lmsgprefix|log.LstdFlags),
+    if build.IsDebug {
+        return &DebugRecorder{
+            logger: log.New(os.Stdout, "DEBUG: ", log.Lmsgprefix|log.LstdFlags),
+        }
     }
+
+    return &DebugRecorder{}
 }
 
 func newWarningRecorder() Recorder {
