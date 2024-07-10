@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"hometown-bot/model"
 	"hometown-bot/repository"
-	"hometown-bot/utils/color"
+	"hometown-bot/util/discord"
 	"log"
 
 	"github.com/bwmarrin/discordgo"
@@ -123,7 +123,7 @@ func (rc *ResetCommands) getCommandHandlers() map[string]func(s *discordgo.Sessi
 				Title: "🚨 Error",
 				Description: "Oops, something went wrong.\n" +
 					"Hol' up, you aren't supposed to see this message.",
-				ColorType: color.Failure,
+				ColorType: discord.Failure,
 			}
 
 			switch subcommandCommand {
@@ -140,7 +140,7 @@ func (rc *ResetCommands) getCommandHandlers() map[string]func(s *discordgo.Sessi
 						{
 							Title:       commandResponse.Title,
 							Description: commandResponse.Description,
-							Color:       color.GetColorFrom(commandResponse.ColorType),
+							Color:       discord.GetColorFrom(commandResponse.ColorType),
 						},
 					},
 					Flags: discordgo.MessageFlagsEphemeral,
@@ -159,7 +159,7 @@ func (rc *ResetCommands) handleCommandCapacity(s *discordgo.Session, i *discordg
 		return model.CommandResponse{
 			Title:       "🧀 Warning",
 			Description: "\"" + channel.Name + "\" is not a lobby!",
-			ColorType:   color.Warning,
+			ColorType:   discord.Warning,
 		}
 	}
 
@@ -179,14 +179,14 @@ func (rc *ResetCommands) handleCommandCapacity(s *discordgo.Session, i *discordg
 		return model.CommandResponse{
 			Title:       "🚨 Error",
 			Description: "Unable to update lobby!",
-			ColorType:   color.Failure,
+			ColorType:   discord.Failure,
 		}
 	}
 
 	return model.CommandResponse{
 		Title:       "✅ OK",
 		Description: "Capacity successfully reset for \"" + channel.Name + "\".",
-		ColorType:   color.Success,
+		ColorType:   discord.Success,
 	}
 }
 
@@ -199,7 +199,7 @@ func (rc *ResetCommands) handleCommandName(s *discordgo.Session, i *discordgo.In
 		return model.CommandResponse{
 			Title:       "🧀 Warning",
 			Description: "\"" + channel.Name + "\" is not a lobby!",
-			ColorType:   color.Warning,
+			ColorType:   discord.Warning,
 		}
 	}
 
@@ -221,13 +221,13 @@ func (rc *ResetCommands) handleCommandName(s *discordgo.Session, i *discordgo.In
 		return model.CommandResponse{
 			Title:       "🚨 Error",
 			Description: "Unable to update lobby!",
-			ColorType:   color.Failure,
+			ColorType:   discord.Failure,
 		}
 	}
 
 	return model.CommandResponse{
 		Title:       "✅ OK",
 		Description: "Name successfully reset to default for " + channel.Name + ".",
-		ColorType:   color.Success,
+		ColorType:   discord.Success,
 	}
 }

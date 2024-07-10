@@ -2,7 +2,7 @@ package model
 
 import (
 	"database/sql"
-	"hometown-bot/utils/color"
+    "hometown-bot/util/discord"
 )
 
 type Lobby struct {
@@ -21,5 +21,5 @@ type Channel struct {
 type CommandResponse struct {
 	Title       string
 	Description string
-	ColorType   color.ColorType
+	ColorType   discord.Color
 }

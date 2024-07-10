@@ -1,4 +1,4 @@
-package color
+package discord
 
 // Discord color palette
 const (
@@ -14,17 +14,17 @@ const (
 	Red             int = 15548997
 )
 
-type ColorType int
+type Color int
 
 const (
-	Default ColorType = iota
+	Default Color = iota
 	Success
 	Warning
 	Failure
 )
 
-func GetColorFrom(ct ColorType) int {
-	switch ct {
+func GetColorFrom(c Color) int {
+	switch c {
 	case Success:
 		return Green
 	case Warning:

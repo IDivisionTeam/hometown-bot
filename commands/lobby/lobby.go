@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"hometown-bot/model"
 	"hometown-bot/repository"
-	"hometown-bot/utils/color"
+	"hometown-bot/util/discord"
 	"log"
 	"strconv"
 	"strings"
@@ -325,7 +325,7 @@ func (lc *LobbyCommands) getCommandHandlers() map[string]func(s *discordgo.Sessi
 				Title: "🚨 Error",
 				Description: "Oops, something went wrong.\n" +
 					"Hol' up, you aren't supposed to see this message.",
-				ColorType: color.Failure,
+				ColorType: discord.Failure,
 			}
 
 			switch slashCommand {
@@ -348,7 +348,7 @@ func (lc *LobbyCommands) getCommandHandlers() map[string]func(s *discordgo.Sessi
 						{
 							Title:       commandResponse.Title,
 							Description: commandResponse.Description,
-							Color:       color.GetColorFrom(commandResponse.ColorType),
+							Color:       discord.GetColorFrom(commandResponse.ColorType),
 						},
 					},
 					Flags: discordgo.MessageFlagsEphemeral,
@@ -375,7 +375,7 @@ func (lc *LobbyCommands) handleCommandRegister(s *discordgo.Session, i *discordg
 		return model.CommandResponse{
 			Title:       "🚨 Error",
 			Description: "Lobby \"" + channel.Name + "\" cannot be registered.",
-			ColorType:   color.Failure,
+			ColorType:   discord.Failure,
 		}
 	}
 
@@ -383,14 +383,14 @@ func (lc *LobbyCommands) handleCommandRegister(s *discordgo.Session, i *discordg
 		return model.CommandResponse{
 			Title:       "🧀 Warning",
 			Description: "\"" + channel.Name + "\" is already registered as a lobby!",
-			ColorType:   color.Warning,
+			ColorType:   discord.Warning,
 		}
 	}
 
 	return model.CommandResponse{
 		Title:       "✅ OK",
 		Description: "Lobby \"" + channel.Name + "\" successfully registered.",
-		ColorType:   color.Success,
+		ColorType:   discord.Success,
 	}
 }
 
@@ -403,7 +403,7 @@ func (lc *LobbyCommands) handleCommandCapacity(s *discordgo.Session, i *discordg
 		return model.CommandResponse{
 			Title:       "🧀 Warning",
 			Description: "User limit cannot be negative or zero!",
-			ColorType:   color.Warning,
+			ColorType:   discord.Warning,
 		}
 	}
 
@@ -412,7 +412,7 @@ func (lc *LobbyCommands) handleCommandCapacity(s *discordgo.Session, i *discordg
 		return model.CommandResponse{
 			Title:       "🧀 Warning",
 			Description: "\"" + channel.Name + "\" is not a lobby!",
-			ColorType:   color.Warning,
+			ColorType:   discord.Warning,
 		}
 	}
 
@@ -432,14 +432,14 @@ func (lc *LobbyCommands) handleCommandCapacity(s *discordgo.Session, i *discordg
 		return model.CommandResponse{
 			Title:       "🚨 Error",
 			Description: "Unable to update lobby!",
-			ColorType:   color.Failure,
+			ColorType:   discord.Failure,
 		}
 	}
 
 	return model.CommandResponse{
 		Title:       "✅ OK",
 		Description: "Capacity " + strconv.FormatInt(capacity, 10) + " successfully set for \"" + channel.Name + "\".",
-		ColorType:   color.Success,
+		ColorType:   discord.Success,
 	}
 }
 
@@ -453,7 +453,7 @@ func (lc *LobbyCommands) handleCommandName(s *discordgo.Session, i *discordgo.In
 		return model.CommandResponse{
 			Title:       "🧀 Warning",
 			Description: "\"" + channel.Name + "\" is not a lobby!",
-			ColorType:   color.Warning,
+			ColorType:   discord.Warning,
 		}
 	}
 
@@ -473,14 +473,14 @@ func (lc *LobbyCommands) handleCommandName(s *discordgo.Session, i *discordgo.In
 		return model.CommandResponse{
 			Title:       "🚨 Error",
 			Description: "Unable to update lobby!",
-			ColorType:   color.Failure,
+			ColorType:   discord.Failure,
 		}
 	}
 
 	return model.CommandResponse{
 		Title:       "✅ OK",
 		Description: "Name " + name + " successfully set for " + channel.Name + ".",
-		ColorType:   color.Success,
+		ColorType:   discord.Success,
 	}
 }
 
@@ -492,7 +492,7 @@ func (lc *LobbyCommands) handleCommandList(s *discordgo.Session, i *discordgo.In
 		return model.CommandResponse{
 			Title:       "🚨 Error",
 			Description: "Unable to get lobbies!",
-			ColorType:   color.Failure,
+			ColorType:   discord.Failure,
 		}
 	}
 
@@ -505,7 +505,7 @@ func (lc *LobbyCommands) handleCommandList(s *discordgo.Session, i *discordgo.In
 			return model.CommandResponse{
 				Title:       "🚨 Error",
 				Description: "Unable to get channels!",
-				ColorType:   color.Failure,
+				ColorType:   discord.Failure,
 			}
 		}
 		if channel.ID == lobby.Id {
@@ -535,14 +535,14 @@ func (lc *LobbyCommands) handleCommandList(s *discordgo.Session, i *discordgo.In
 		return model.CommandResponse{
 			Title:       "🧀 Warning",
 			Description: "There are no active lobbies.",
-			ColorType:   color.Warning,
+			ColorType:   discord.Warning,
 		}
 	}
 
 	return model.CommandResponse{
 		Title:       "✅ OK",
 		Description: "Active Lobbies:\n" + strings.Join(registeredChannels, "\n"),
-		ColorType:   color.Success,
+		ColorType:   discord.Success,
 	}
 }
 
@@ -557,7 +557,7 @@ func (lc *LobbyCommands) handleCommandRemove(s *discordgo.Session, i *discordgo.
 		return model.CommandResponse{
 			Title:       "🚨 Error",
 			Description: "Unable unregister \"" + channel.Name + "\" lobby.",
-			ColorType:   color.Failure,
+			ColorType:   discord.Failure,
 		}
 	}
 
@@ -565,13 +565,13 @@ func (lc *LobbyCommands) handleCommandRemove(s *discordgo.Session, i *discordgo.
 		return model.CommandResponse{
 			Title:       "🧀 Warning",
 			Description: "\"" + channel.Name + "\" is not a lobby!",
-			ColorType:   color.Warning,
+			ColorType:   discord.Warning,
 		}
 	}
 
 	return model.CommandResponse{
 		Title:       "✅ OK",
 		Description: "Lobby \"" + channel.Name + "\" successfully unregistered.",
-		ColorType:   color.Success,
+		ColorType:   discord.Success,
 	}
 }
