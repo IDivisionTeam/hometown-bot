@@ -26,7 +26,7 @@ jobs:
 
       - uses: actions/cache@v3
         with:
-          path: ./main
+          path: ./hometown-bot
           key: build
 
   deploy:
@@ -37,7 +37,7 @@ jobs:
 
       - uses: actions/cache@v3
         with:
-          path: ./main
+          path: ./hometown-bot
           key: build
 
       - name: Deploy
