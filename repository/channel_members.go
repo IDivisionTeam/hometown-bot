@@ -3,6 +3,7 @@ package repository
 import (
     "database/sql"
     "fmt"
+    "hometown-bot/log"
 )
 
 type ChannelMembersRepository struct {
@@ -19,12 +20,18 @@ WHERE (guild_id = ? AND channel_id = ?)
 `
 
 func (cmr *ChannelMembersRepository) GetChannelMembersCount(guildId string, channelId string) (int, error) {
+    log.Debug().Printf("repo: get channel[%s] member count for guild[%s]", channelId, guildId)
+
     var output int
     row := cmr.db.QueryRow(CountChannelMembers, guildId, channelId)
 
-    err := row.Scan(&output)
-    if err != nil {
-        return 0, fmt.Errorf("get channel members for %s: %w", channelId, err)
+    if err := row.Scan(&output); err != nil {
+        return 0, fmt.Errorf(
+            "repo: unable to get channel[%s] member count for guild[%s]: %w",
+            channelId,
+            guildId,
+            err,
+        )
     }
 
     return output, nil
@@ -41,9 +48,16 @@ WHERE guild_id = ?
 `
 
 func (cmr *ChannelMembersRepository) SetChannelMember(guildId string, userId string, channelId string) error {
-    _, err := cmr.db.Exec(InsertChannelMembers, guildId, userId, channelId, guildId)
-    if err != nil {
-        return fmt.Errorf("unable to insert user %s for channel %s: %w", userId, channelId, err)
+    log.Debug().Printf("repo: set channel[%s] member[%s] for guild[%s]", channelId, userId, guildId)
+
+    if _, err := cmr.db.Exec(InsertChannelMembers, guildId, userId, channelId, guildId); err != nil {
+        return fmt.Errorf(
+            "repo: unable to set channel[%s] member[%s] for guild[%s]: %w",
+            channelId,
+            userId,
+            guildId,
+            err,
+        )
     }
 
     return nil
@@ -51,14 +65,22 @@ func (cmr *ChannelMembersRepository) SetChannelMember(guildId string, userId str
 
 const DeleteChannelMember = `
 DELETE FROM channel_members
-WHERE (guild_id = ? AND user_id = ?)
+WHERE (guild_id = ? AND user_id = ? AND channel_id = ?)
 `
 
-func (cmr *ChannelMembersRepository) DeleteChannelMember(guildId string, userId string) error {
-    _, err := cmr.db.Exec(DeleteChannelMember, guildId, userId)
-    if err != nil {
-        return fmt.Errorf("unable to delete user %s for temp channel: %w", userId, err)
+func (cmr *ChannelMembersRepository) DeleteChannelMember(guildId string, userId string, channelId string) error {
+    log.Debug().Printf("repo: delete channel[%s] member[%s] for guild[%s]", channelId, userId, guildId)
+
+    if _, err := cmr.db.Exec(DeleteChannelMember, guildId, userId, channelId); err != nil {
+        return fmt.Errorf(
+            "repo: unable to delete channel[%s] member[%s] for guild[%s]: %w",
+            channelId,
+            userId,
+            guildId,
+            err,
+        )
     }
+
     return nil
 }
 
@@ -68,9 +90,16 @@ WHERE (guild_id = ? AND channel_id = ?)
 `
 
 func (cmr *ChannelMembersRepository) DeleteChannelMembers(guildId string, channelId string) error {
-    _, err := cmr.db.Exec(DeleteChannelMember, guildId, channelId)
-    if err != nil {
-        return fmt.Errorf("unable to delete temp channel %s: %w", channelId, err)
+    log.Debug().Printf("repo: delete channel[%s] members for guild[%s]", channelId, guildId)
+
+    if _, err := cmr.db.Exec(DeleteChannelMembers, guildId, channelId); err != nil {
+        return fmt.Errorf(
+            "repo: unable to delete channel[%s] members for guild[%s]: %w",
+            channelId,
+            guildId,
+            err,
+        )
     }
+
     return nil
 }

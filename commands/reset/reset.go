@@ -2,10 +2,11 @@ package reset
 
 import (
     "database/sql"
+    "fmt"
+    "hometown-bot/commands"
+    "hometown-bot/log"
     "hometown-bot/model"
     "hometown-bot/repository"
-    "hometown-bot/util/discord"
-    "log"
 
     "github.com/bwmarrin/discordgo"
 )
@@ -24,29 +25,29 @@ var (
     Commands                       = getCommands()
 )
 
-type ResetCommands struct {
+type Command struct {
     channelRepository repository.ChannelRepository
     lobbyRepository   repository.LobbyRepository
     commandHandlers   map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate) // Command interaction
 }
 
-func New(channelRepository repository.ChannelRepository, lobbyRepository repository.LobbyRepository) *ResetCommands {
-    commands := ResetCommands{
+func New(channelRepository repository.ChannelRepository, lobbyRepository repository.LobbyRepository) *Command {
+    commands := Command{
         channelRepository: channelRepository,
         lobbyRepository:   lobbyRepository,
     }
 
-    commands.commandHandlers = commands.getCommandHandlers()
+    commands.commandHandlers = commands.createCommandHandlers()
     return &commands
 }
 
-func (rc *ResetCommands) HandleSlashCommands(discord *discordgo.Session, interaction *discordgo.InteractionCreate) {
+func (rc *Command) HandleSlashCommands(discord *discordgo.Session, interaction *discordgo.InteractionCreate) {
     if handler, ok := rc.commandHandlers[interaction.ApplicationCommandData().Name]; ok {
         handler(discord, interaction)
     }
 }
 
-/* Commands */
+/* ------ COMMANDS ------ */
 
 func getCommands() []*discordgo.ApplicationCommand {
     return []*discordgo.ApplicationCommand{
@@ -112,19 +113,18 @@ func getNameCommand() *discordgo.ApplicationCommandOption {
     }
 }
 
-/* Interactions */
+/* ------ INTERACTIONS ------ */
 
-func (rc *ResetCommands) getCommandHandlers() map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+func (rc *Command) createCommandHandlers() map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate) {
     return map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
         reset: func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-            // slashCommand := i.ApplicationCommandData().Options[0].Name as for now I do not need to handle groups
+            log.Info().Printf("trigger %s:%s command interaction", commandGroup, reset)
+
+            slashCommand := i.ApplicationCommandData().Options[0].Name
             subcommandCommand := i.ApplicationCommandData().Options[0].Options[0].Name
-            commandResponse := model.CommandResponse{
-                Title: "🚨 Error",
-                Description: "Oops, something went wrong.\n" +
-                    "Hol' up, you aren't supposed to see this message.",
-                ColorType: discord.Failure,
-            }
+            commandResponse := model.CommandError(
+                fmt.Sprintf("Oops, something went wrong.Hol' up, you aren't supposed to see this message."),
+            )
 
             switch subcommandCommand {
             case commandCapacity:
@@ -133,34 +133,29 @@ func (rc *ResetCommands) getCommandHandlers() map[string]func(s *discordgo.Sessi
                 commandResponse = rc.handleCommandName(s, i)
             }
 
-            s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+            log.Info().Printf("reset: sending interaction response for %s:%s", slashCommand, subcommandCommand)
+            if err := s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
                 Type: discordgo.InteractionResponseChannelMessageWithSource,
                 Data: &discordgo.InteractionResponseData{
                     Embeds: []*discordgo.MessageEmbed{
-                        {
-                            Title:       commandResponse.Title,
-                            Description: commandResponse.Description,
-                            Color:       discord.GetColorFrom(commandResponse.ColorType),
-                        },
+                        commandResponse.ToEmbededMessage(),
                     },
                     Flags: discordgo.MessageFlagsEphemeral,
                 },
-            })
+            }); err != nil {
+                log.Error().Printf("reset: interaction response: %v", err)
+            }
         },
     }
 }
 
-func (rc *ResetCommands) handleCommandCapacity(s *discordgo.Session, i *discordgo.InteractionCreate) model.CommandResponse {
+func (rc *Command) handleCommandCapacity(s *discordgo.Session, i *discordgo.InteractionCreate) model.CommandResponse {
     options := i.ApplicationCommandData().Options
     channel := options[0].Options[0].Options[0].ChannelValue(s)
 
-    _, err := rc.lobbyRepository.GetLobby(channel.ID, i.GuildID)
-    if err == nil {
-        return model.CommandResponse{
-            Title:       "🧀 Warning",
-            Description: "\"" + channel.Name + "\" is not a lobby!",
-            ColorType:   discord.Warning,
-        }
+    if response, err := commands.HasLobby(rc.lobbyRepository, channel, i.GuildID); err != nil {
+        log.Warn().Printf("reset: capacity command: %v", err)
+        return response
     }
 
     lobby := model.Lobby{
@@ -172,62 +167,58 @@ func (rc *ResetCommands) handleCommandCapacity(s *discordgo.Session, i *discordg
         },
     }
 
-    err = rc.lobbyRepository.UpsertLobby(&lobby)
-    if err != nil {
-        log.Println("unable to update lobby! %w", err)
+    if err := rc.lobbyRepository.UpsertLobby(&lobby); err != nil {
+        log.Error().Printf(
+            "reset: capacity command: unable to reset capacity for lobby %s[%s]: %v",
+            channel.Name,
+            channel.ID,
+            err,
+        )
 
-        return model.CommandResponse{
-            Title:       "🚨 Error",
-            Description: "Unable to update lobby!",
-            ColorType:   discord.Failure,
-        }
+        return model.CommandError(
+            fmt.Sprintf("Unable to reset capacity for \"%s\"", channel.Name),
+        )
     }
 
-    return model.CommandResponse{
-        Title:       "✅ OK",
-        Description: "Capacity successfully reset for \"" + channel.Name + "\".",
-        ColorType:   discord.Success,
-    }
+    log.Info().Printf("reset: capacity command: capacity reset for %s[%s]", channel.Name, lobby.Id)
+    return model.CommandSuccess(
+        fmt.Sprintf("Capacity successfully reset for \"%s\".", channel.Name),
+    )
 }
 
-func (rc *ResetCommands) handleCommandName(s *discordgo.Session, i *discordgo.InteractionCreate) model.CommandResponse {
+func (rc *Command) handleCommandName(s *discordgo.Session, i *discordgo.InteractionCreate) model.CommandResponse {
     options := i.ApplicationCommandData().Options
     channel := options[0].Options[0].Options[0].ChannelValue(s)
 
-    _, err := rc.lobbyRepository.GetLobby(channel.ID, i.GuildID)
-    if err == nil {
-        return model.CommandResponse{
-            Title:       "🧀 Warning",
-            Description: "\"" + channel.Name + "\" is not a lobby!",
-            ColorType:   discord.Warning,
-        }
-    }
-
-    template := sql.NullString{
-        Valid:  true,
-        String: "",
+    if response, err := commands.HasLobby(rc.lobbyRepository, channel, i.GuildID); err != nil {
+        log.Warn().Printf("reset: capacity command: %v", err)
+        return response
     }
 
     lobby := model.Lobby{
         Id:         channel.ID,
         CategoryID: channel.ParentID,
-        Template:   template,
+        Template: sql.NullString{
+            Valid:  true,
+            String: "",
+        },
     }
 
-    err = rc.lobbyRepository.UpsertLobby(&lobby)
-    if err != nil {
-        log.Println("unable to update lobby! %w", err)
+    if err := rc.lobbyRepository.UpsertLobby(&lobby); err != nil {
+        log.Error().Printf(
+            "reset: name command: unable to reset name for lobby %s[%s]: %v",
+            channel.Name,
+            channel.ID,
+            err,
+        )
 
-        return model.CommandResponse{
-            Title:       "🚨 Error",
-            Description: "Unable to update lobby!",
-            ColorType:   discord.Failure,
-        }
+        return model.CommandError(
+            fmt.Sprintf("Unable to reset name for \"%s\"", channel.Name),
+        )
     }
 
-    return model.CommandResponse{
-        Title:       "✅ OK",
-        Description: "Name successfully reset to default for " + channel.Name + ".",
-        ColorType:   discord.Success,
-    }
+    log.Info().Printf("reset: name command: name reset for %s[%s]", channel.Name, lobby.Id)
+    return model.CommandSuccess(
+        fmt.Sprintf("Name successfully reset for \"%s\".", channel.Name),
+    )
 }

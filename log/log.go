@@ -1,4 +1,4 @@
-package recorder
+package log
 
 import (
     "github.com/fatih/color"
@@ -8,9 +8,9 @@ import (
 )
 
 type Recorder interface {
-    print(v ...any)
-    printf(format string, v ...any)
-    println(v ...any)
+    Print(v ...any)
+    Printf(format string, v ...any)
+    Println(v ...any)
 }
 
 type InfoRecorder struct {
@@ -29,53 +29,59 @@ type ErrorRecorder struct {
     logger *log.Logger
 }
 
-func (i *InfoRecorder) print(v ...any) {
+func (i *InfoRecorder) Print(v ...any) {
     i.logger.Print(util.WrapInColor(color.FgBlue, v...))
 }
 
-func (i *InfoRecorder) printf(format string, v ...any) {
+func (i *InfoRecorder) Printf(format string, v ...any) {
     i.logger.Print(util.WrapInColorf(color.FgBlue, format, v...))
 }
 
-func (i *InfoRecorder) println(v ...any) {
+func (i *InfoRecorder) Println(v ...any) {
     i.logger.Print(util.WrapInColorln(color.FgBlue, v...))
 }
 
-func (i *DebugRecorder) print(v ...any) {
-    if !build.IsDebug { return }
+func (i *DebugRecorder) Print(v ...any) {
+    if !build.IsDebug {
+        return
+    }
     i.logger.Print(util.WrapInColor(color.FgGreen, v...))
 }
 
-func (i *DebugRecorder) printf(format string, v ...any) {
-    if !build.IsDebug { return }
+func (i *DebugRecorder) Printf(format string, v ...any) {
+    if !build.IsDebug {
+        return
+    }
     i.logger.Print(util.WrapInColorf(color.FgGreen, format, v...))
 }
 
-func (i *DebugRecorder) println(v ...any) {
-    if !build.IsDebug { return }
+func (i *DebugRecorder) Println(v ...any) {
+    if !build.IsDebug {
+        return
+    }
     i.logger.Print(util.WrapInColorln(color.FgGreen, v...))
 }
 
-func (i *WarningRecorder) print(v ...any) {
+func (i *WarningRecorder) Print(v ...any) {
     i.logger.Print(util.WrapInColor(color.FgYellow, v...))
 }
 
-func (i *WarningRecorder) printf(format string, v ...any) {
+func (i *WarningRecorder) Printf(format string, v ...any) {
     i.logger.Print(util.WrapInColorf(color.FgYellow, format, v...))
 }
 
-func (i *WarningRecorder) println(v ...any) {
+func (i *WarningRecorder) Println(v ...any) {
     i.logger.Print(util.WrapInColorln(color.FgYellow, v...))
 }
 
-func (i *ErrorRecorder) print(v ...any) {
+func (i *ErrorRecorder) Print(v ...any) {
     i.logger.Print(util.WrapInColor(color.FgRed, v...))
 }
 
-func (i *ErrorRecorder) printf(format string, v ...any) {
+func (i *ErrorRecorder) Printf(format string, v ...any) {
     i.logger.Print(util.WrapInColorf(color.FgRed, format, v...))
 }
 
-func (i *ErrorRecorder) println(v ...any) {
+func (i *ErrorRecorder) Println(v ...any) {
     i.logger.Print(util.WrapInColorln(color.FgRed, v...))
 }

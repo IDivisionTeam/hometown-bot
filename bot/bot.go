@@ -4,17 +4,16 @@ import (
     "fmt"
     "hometown-bot/commands/lobby"
     "hometown-bot/commands/reset"
+    "hometown-bot/log"
     "hometown-bot/repository"
-    "log"
     "os"
     "os/signal"
 
     "github.com/bwmarrin/discordgo"
 )
 
-var (
-    Token string // Discord BOT API token
-)
+// Token - discord bot API
+var Token string
 
 type Bot struct {
     channelRepository        repository.ChannelRepository
@@ -35,45 +34,45 @@ func Create(
 }
 
 func (bot *Bot) Run() error {
+    log.Debug().Println("bot: start new session")
     discord, err := discordgo.New("Bot " + Token)
     if err != nil {
         return fmt.Errorf("unable to create a new bot session: %w", err)
     }
 
+    log.Debug().Println("bot: load commands")
     lobbyCommands := lobby.New(bot.channelRepository, bot.channelMembersRepository, bot.lobbyRepository)
     resetCommands := reset.New(bot.channelRepository, bot.lobbyRepository)
 
-    log.Println("Bot created! Attaching handlers...")
+    log.Debug().Println("bot: attach handlers for commands")
     discord.AddHandler(lobbyCommands.HandleSlashCommands)
     discord.AddHandler(resetCommands.HandleSlashCommands)
     discord.AddHandler(lobbyCommands.HandleVoiceUpdates)
 
-    err = discord.Open()
-    if err != nil {
+    log.Debug().Println("bot: establish socket connection")
+    if err := discord.Open(); err != nil {
         return fmt.Errorf("unable to create socket: %w", err)
     }
 
-    log.Println("Websocket open! Creating commands...")
+    log.Debug().Println("bot: create commands for discord")
     registeredCommands, err := createCommands(discord)
     if err != nil {
         return fmt.Errorf("unable to register bot commands: %w", err)
     }
 
     defer func(discord *discordgo.Session) {
-        err := discord.Close()
-        if err != nil {
-            log.Printf("unable to close bot: %v", err)
+        if err := discord.Close(); err != nil {
+            log.Error().Printf("bot: unable to close bot socket: %v", err)
         }
     }(discord)
 
-    log.Println("Bot running...")
+    log.Info().Println("bot: running..")
     channel := make(chan os.Signal, 1)
     signal.Notify(channel, os.Interrupt)
     <-channel
 
-    log.Println("Bot stopped! Removing slash commands...")
-    err = removeSlashCommands(discord, registeredCommands)
-    if err != nil {
+    log.Info().Println("bot: stopping.. removing slash commands")
+    if err := removeSlashCommands(discord, registeredCommands); err != nil {
         return fmt.Errorf("unable to remove bot commands: %w", err)
     }
 
@@ -85,7 +84,12 @@ func createCommands(discord *discordgo.Session) ([]*discordgo.ApplicationCommand
 
     registeredCommands := make([]*discordgo.ApplicationCommand, len(joinedCommands))
     for i, v := range joinedCommands {
-        cmd, err := discord.ApplicationCommandCreate(discord.State.User.ID, discord.State.Application.GuildID, v)
+        log.Debug().Printf("bot: add command: %s", v.Name)
+        cmd, err := discord.ApplicationCommandCreate(
+            discord.State.User.ID,
+            discord.State.Application.GuildID,
+            v,
+        )
         if err != nil {
             return nil, fmt.Errorf("cannot create '%s' command: %w", v.Name, err)
         }
@@ -97,7 +101,12 @@ func createCommands(discord *discordgo.Session) ([]*discordgo.ApplicationCommand
 
 func removeSlashCommands(discord *discordgo.Session, registeredCommands []*discordgo.ApplicationCommand) error {
     for _, v := range registeredCommands {
-        err := discord.ApplicationCommandDelete(discord.State.User.ID, discord.State.Application.GuildID, v.ID)
+        log.Debug().Printf("bot: remove command: %s[%s]", v.Name, v.ID)
+        err := discord.ApplicationCommandDelete(
+            discord.State.User.ID,
+            discord.State.Application.GuildID,
+            v.ID,
+        )
         if err != nil {
             return fmt.Errorf("cannot delete '%s' command: %w", v.Name, err)
         }

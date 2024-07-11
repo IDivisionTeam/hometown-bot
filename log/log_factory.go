@@ -1,4 +1,4 @@
-package recorder
+package log
 
 import (
     "hometown-bot/build"
@@ -58,15 +58,35 @@ func newErrorRecorder() Recorder {
 
 func Print(lt Type, v ...any) {
     once.Do(createRecorders)
-    loggers[lt].print(v...)
+    loggers[lt].Print(v...)
 }
 
 func Printf(lt Type, format string, v ...any) {
     once.Do(createRecorders)
-    loggers[lt].printf(format, v...)
+    loggers[lt].Printf(format, v...)
 }
 
 func Println(lt Type, v ...any) {
     once.Do(createRecorders)
-    loggers[lt].println(v...)
+    loggers[lt].Println(v...)
+}
+
+func Info() Recorder {
+    once.Do(createRecorders)
+    return loggers[INFO]
+}
+
+func Debug() Recorder {
+    once.Do(createRecorders)
+    return loggers[DEBUG]
+}
+
+func Warn() Recorder {
+    once.Do(createRecorders)
+    return loggers[WARN]
+}
+
+func Error() Recorder {
+    once.Do(createRecorders)
+    return loggers[ERROR]
 }

@@ -3,6 +3,7 @@ package repository
 import (
     "database/sql"
     "fmt"
+    "hometown-bot/log"
     "hometown-bot/model"
 )
 
@@ -21,18 +22,26 @@ WHERE (id = ? AND guild_id = ?)
 `
 
 func (cr *LobbyRepository) GetLobby(id string, guildId string) (model.Lobby, error) {
-    var lobby model.Lobby
+    log.Debug().Printf("repo: get lobby[%s] for guild[%s]", id, guildId)
 
-    err := cr.db.QueryRow(
+    var lobby model.Lobby
+    if err := cr.db.QueryRow(
         SelectLobbyById,
+        id,
+        guildId,
+    ).Scan(
         &lobby.Id,
         &lobby.Template,
         &lobby.Capacity,
         &lobby.CategoryID,
         &lobby.GuildID,
-    ).Scan()
-    if err != nil {
-        return model.Lobby{}, fmt.Errorf("unable to get lobby for id %s: %w", id, err)
+    ); err != nil {
+        return model.Lobby{}, fmt.Errorf(
+            "repo: unable to get lobby[%s] for guild[%s]: %w",
+            id,
+            guildId,
+            err,
+        )
     }
 
     return lobby, nil
@@ -45,26 +54,33 @@ WHERE guild_id = ?
 `
 
 func (cr *LobbyRepository) GetLobbies(guildId string) ([]model.Lobby, error) {
+    log.Debug().Printf("repo: get lobbies for guild[%s]", guildId)
+
     rows, err := cr.db.Query(SelectLobbies, guildId)
     if err != nil {
-        return []model.Lobby{}, fmt.Errorf("unable to get lobbies: %w", err)
+        return []model.Lobby{}, fmt.Errorf(
+            "repo: unable to lobbies for guild[%s]: %w",
+            guildId,
+            err,
+        )
     }
-
-    defer rows.Close()
 
     var lobbies []model.Lobby
     for rows.Next() {
         var lobby model.Lobby
 
-        err = rows.Scan(
+        if err := rows.Scan(
             &lobby.Id,
             &lobby.Template,
             &lobby.Capacity,
             &lobby.CategoryID,
             &lobby.GuildID,
-        )
-        if err != nil {
-            return nil, fmt.Errorf("unable to get lobbies: %w", err)
+        ); err != nil {
+            return nil, fmt.Errorf(
+                "repo: unable to lobbies for guild[%s]: %w",
+                guildId,
+                err,
+            )
         }
 
         lobbies = append(lobbies, lobby)
@@ -82,6 +98,8 @@ DO NOTHING
 `
 
 func (cr *LobbyRepository) SetLobby(lobby *model.Lobby) (int64, error) {
+    log.Debug().Printf("repo: set lobby[%s]", lobby.Id)
+
     result, err := cr.db.Exec(
         ReplaceLobby,
         lobby.Id,
@@ -93,12 +111,12 @@ func (cr *LobbyRepository) SetLobby(lobby *model.Lobby) (int64, error) {
         lobby.GuildID,
     )
     if err != nil {
-        return 0, err
+        return 0, fmt.Errorf("repo: unable to set lobby[%s]: %w", lobby.Id, err)
     }
 
     affectedRows, err := result.RowsAffected()
     if err != nil {
-        return 0, err
+        return 0, fmt.Errorf("repo: unable to set lobby[%s]: %w", lobby.Id, err)
     }
 
     return affectedRows, nil
@@ -115,14 +133,15 @@ SET
 `
 
 func (cr *LobbyRepository) UpsertLobby(lobby *model.Lobby) error {
-    _, err := cr.db.Exec(
+    log.Debug().Printf("repo: upsert lobby[%s]", lobby.Id)
+
+    if _, err := cr.db.Exec(
         UpsertLobby,
         lobby.Id,
         lobby.Template,
         lobby.Capacity,
-    )
-    if err != nil {
-        return err
+    ); err != nil {
+        return fmt.Errorf("repo: unable to upsert lobby[%s]: %w", lobby.Id, err)
     }
 
     return nil
@@ -134,14 +153,16 @@ WHERE (id = ? AND guild_id = ?)
 `
 
 func (cr *LobbyRepository) DeleteLobby(id string, guildId string) (int64, error) {
+    log.Debug().Printf("repo: delete lobby[%s] for guild[%s]", id, guildId)
+
     result, err := cr.db.Exec(DeleteLobby, id, guildId)
     if err != nil {
-        return 0, fmt.Errorf("unable to delete lobby for id %s: %w", id, err)
+        return 0, fmt.Errorf("repo: unable to delete lobby[%s] for guild[%s]: %w", id, guildId, err)
     }
 
     affectedRows, err := result.RowsAffected()
     if err != nil {
-        return 0, err
+        return 0, fmt.Errorf("repo: unable to delete lobby[%s] for guild[%s]: %w", id, guildId, err)
     }
 
     return affectedRows, nil
