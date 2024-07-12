@@ -3,6 +3,7 @@ package bot
 import (
     "fmt"
     "hometown-bot/commands/lobby"
+    "hometown-bot/commands/message"
     "hometown-bot/commands/reset"
     "hometown-bot/log"
     "hometown-bot/repository"
@@ -43,11 +44,13 @@ func (bot *Bot) Run() error {
     log.Debug().Println("bot: load commands")
     lobbyCommands := lobby.New(bot.channelRepository, bot.channelMembersRepository, bot.lobbyRepository)
     resetCommands := reset.New(bot.channelRepository, bot.lobbyRepository)
+    messageCommands := message.New()
 
     log.Debug().Println("bot: attach handlers for commands")
     discord.AddHandler(lobbyCommands.HandleSlashCommands)
     discord.AddHandler(resetCommands.HandleSlashCommands)
     discord.AddHandler(lobbyCommands.HandleVoiceUpdates)
+    discord.AddHandler(messageCommands.HandleSlashCommands)
 
     log.Debug().Println("bot: establish socket connection")
     if err := discord.Open(); err != nil {
@@ -81,6 +84,7 @@ func (bot *Bot) Run() error {
 
 func createCommands(discord *discordgo.Session) ([]*discordgo.ApplicationCommand, error) {
     joinedCommands := append(lobby.Commands, reset.Commands...)
+    joinedCommands = append(joinedCommands, message.Commands...)
 
     registeredCommands := make([]*discordgo.ApplicationCommand, len(joinedCommands))
     for i, v := range joinedCommands {

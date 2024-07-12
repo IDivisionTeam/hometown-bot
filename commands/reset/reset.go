@@ -123,7 +123,7 @@ func (rc *Command) createCommandHandlers() map[string]func(s *discordgo.Session,
             slashCommand := i.ApplicationCommandData().Options[0].Name
             subcommandCommand := i.ApplicationCommandData().Options[0].Options[0].Name
             commandResponse := model.CommandError(
-                fmt.Sprintf("Oops, something went wrong.Hol' up, you aren't supposed to see this message."),
+                fmt.Sprintf("Oops, something went wrong.\nHol' up, you aren't supposed to see this message."),
             )
 
             switch subcommandCommand {
